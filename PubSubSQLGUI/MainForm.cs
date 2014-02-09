@@ -15,7 +15,7 @@ namespace PubSubSQLGUI
         private int PUBSUB_TIMEOUT = 5; // in milliseconds
         private int FLASH_TIMER_INTERVAL = 150;
         private long FLASH_TIMEOUT = 300 * 10000; // ticks converted to milliseconds
-        private PubSubSQL.Client client = PubSubSQL.Factory.NewClient();
+        private PubSubSQL.Client client = new PubSubSQL.Client();
         private bool cancelExecuteFlag = false;
         private string connectedAddress = string.Empty;
         private ListViewDataset dataset = new ListViewDataset();

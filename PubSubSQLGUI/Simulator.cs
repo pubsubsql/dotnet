@@ -12,7 +12,7 @@ namespace PubSubSQLGUI
         public int Rows = 0;
         public string TableName = string.Empty;
         public string Address = string.Empty;
-        private PubSubSQL.Client client = PubSubSQL.Factory.NewClient();
+        private PubSubSQL.Client client = new PubSubSQL.Client();
         private volatile bool stopFlag = false;
         Thread thread = null;
         List<string> ids = new List<string>();

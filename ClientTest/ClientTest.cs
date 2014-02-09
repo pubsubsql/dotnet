@@ -14,7 +14,7 @@ namespace PubSubSQLTest
 
         [TestMethod]
         public void TestConnectDisconnect() {
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             ASSERT_CONNECTED(client, true);
             ASSERT_DISCONNECT(client);	
@@ -31,7 +31,7 @@ namespace PubSubSQLTest
 
         [TestMethod]
         public void TestExecuteStatus() {
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             ASSERT_EXECUTE(client, "status", true);
             ASSERT_ACTION(client, "status");
@@ -40,7 +40,7 @@ namespace PubSubSQLTest
 
         [TestMethod]
         public void TestExecuteInvalidCommand() {
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             ASSERT_EXECUTE(client, "blablabla", false);
         }
@@ -48,7 +48,7 @@ namespace PubSubSQLTest
         [TestMethod]
         public void TestInsertOneRow() {
             newtable();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("insert into {0} (col1, col2, col3) values (1:col1, 1:col2, 1:col3)", TABLE);
             ASSERT_EXECUTE(client, command, true);
@@ -70,7 +70,7 @@ namespace PubSubSQLTest
         [TestMethod]
         public void TestInsertManyRows() {
             newtable();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("insert into {0} (col1, col2, col3) values (1:col1, 1:col2, 1:col3)", TABLE);
             for (int r = 0; r < ROWS; r++) {
@@ -97,7 +97,7 @@ namespace PubSubSQLTest
         public void TestSelectOneRow() {
             newtable();
             insertRow();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             // select one row
             String command = string.Format("select * from {0}", TABLE);
@@ -123,7 +123,7 @@ namespace PubSubSQLTest
         public void TestSelectManyRows() {
             newtable();
             insertRows();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("select * from {0}", TABLE);
             ASSERT_EXECUTE(client, command, true);
@@ -149,7 +149,7 @@ namespace PubSubSQLTest
         public void TestUpdateOneRow() {
             newtable();
             insertRow();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("update {0} set col1 = newvalue", TABLE);
             ASSERT_EXECUTE(client, command, true);
@@ -162,7 +162,7 @@ namespace PubSubSQLTest
         public void TestUpdateManyRows() {
             newtable();
             insertRows();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("update {0} set col1 = newvalue", TABLE);
             ASSERT_EXECUTE(client, command, true);
@@ -175,7 +175,7 @@ namespace PubSubSQLTest
         public void TestDeleteOneRow() {
             newtable();
             insertRow();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("delete from {0}", TABLE);
             ASSERT_EXECUTE(client, command, true);
@@ -188,7 +188,7 @@ namespace PubSubSQLTest
         public void TestDeleteManyRows() {
             newtable();
             insertRows();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("delete from {0} ", TABLE);
             ASSERT_EXECUTE(client, command, true);
@@ -201,7 +201,7 @@ namespace PubSubSQLTest
         public void TestKey() {
             newtable();
             insertRows();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("key {0} col1", TABLE);
             ASSERT_EXECUTE(client, command, true);
@@ -213,7 +213,7 @@ namespace PubSubSQLTest
         public void TestTag() {
             newtable();
             insertRows();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("tag {0} col1", TABLE);
             ASSERT_EXECUTE(client, command, true);
@@ -224,7 +224,7 @@ namespace PubSubSQLTest
         [TestMethod]
         public void TestSubscribeUnsubscribe() {
             newtable();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("subscribe * from {0}", TABLE);
             // subscribe
@@ -242,7 +242,7 @@ namespace PubSubSQLTest
         [TestMethod]
         public void TestSubscribeUnsubscribeByPubSubId() {
             newtable();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("subscribe * from {0}", TABLE);
             // subscribe
@@ -260,7 +260,7 @@ namespace PubSubSQLTest
         [TestMethod]
         public void TestPubSubTimeout() {
             newtable();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             ASSERT_WAIT_FOR_PUBSUB(client, 10, false);	
         }
@@ -269,7 +269,7 @@ namespace PubSubSQLTest
         public void TestSubscribeSkip() {
             newtable();
             insertRows();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("subscribe skip * from {0}", TABLE);
             ASSERT_EXECUTE(client, command, true);
@@ -283,7 +283,7 @@ namespace PubSubSQLTest
         public void TestPubSubAddOnSubscribe() {
             newtable();
             insertRows();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("subscribe * from {0}", TABLE);
             // subscribe
@@ -299,7 +299,7 @@ namespace PubSubSQLTest
         [TestMethod]
         public void TestPubSubInsert() {
             newtable();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("subscribe * from {0}", TABLE);
             // subscribe
@@ -317,7 +317,7 @@ namespace PubSubSQLTest
         public void TestPubSubUpdate() {
             newtable();
             insertRows();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("subscribe skip * from {0}", TABLE);
             // subscribe
@@ -338,7 +338,7 @@ namespace PubSubSQLTest
         public void TestPubSubDelete() {
             newtable();
             insertRows();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("subscribe skip * from {0}", TABLE);
             // subscribe
@@ -359,7 +359,7 @@ namespace PubSubSQLTest
         public void TestPubSubRemove() {
             newtable();
             insertRows();
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             // key col1
             String command = string.Format("key {0} col1", TABLE);
@@ -395,7 +395,7 @@ namespace PubSubSQLTest
         }
 
         public void insertRow() {
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("insert into {0} (col1, col2, col3) values (1:col1, 1:col2, 1:col3)", TABLE);
             ASSERT_EXECUTE(client, command, true);
@@ -403,7 +403,7 @@ namespace PubSubSQLTest
         }
 
         public void insertRows() {
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             for (int row = 0; row < ROWS; row++) {	
                 String command = string.Format("insert into {0} (col1, col2, col3) values ({1}:col1, {2}:col2, {3}:col3)", TABLE, row, row, row);
@@ -413,7 +413,7 @@ namespace PubSubSQLTest
         }
 
         public void key(String column) {
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("key {0} {1}", TABLE, column);
             ASSERT_EXECUTE(client, command, true);
@@ -421,7 +421,7 @@ namespace PubSubSQLTest
         }
 
         public void tag(String column) {
-            Client client = PubSubSQL.Factory.NewClient();
+            Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
             String command = string.Format("tag {0} {1}", TABLE, column);
             ASSERT_EXECUTE(client, command, true);
