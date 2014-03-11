@@ -50,7 +50,7 @@ namespace PubSubSQLTest
             newtable();
             Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
-            String command = string.Format("insert into {0} (col1, col2, col3) values (1:col1, 1:col2, 1:col3)", TABLE);
+            String command = string.Format("insert into {0} (col1, col2, col3) values (1:col1, 1:col2, 1:col3) returning *", TABLE);
             ASSERT_EXECUTE(client, command, true);
             ASSERT_ACTION(client, "insert");
             ASSERT_ROW_COUNT(client, 1);
@@ -72,7 +72,7 @@ namespace PubSubSQLTest
             newtable();
             Client client = new Client();
             ASSERT_CONNECT(client, ADDRESS, true);
-            String command = string.Format("insert into {0} (col1, col2, col3) values (1:col1, 1:col2, 1:col3)", TABLE);
+            String command = string.Format("insert into {0} (col1, col2, col3) values (1:col1, 1:col2, 1:col3) returning *", TABLE);
             for (int r = 0; r < ROWS; r++) {
                 ASSERT_EXECUTE(client, command, true);
                 ASSERT_ACTION(client, "insert");
@@ -250,7 +250,7 @@ namespace PubSubSQLTest
             ASSERT_ACTION(client, "subscribe");
             ASSERT_PUBSUBID(client);
             // unsubscribe
-            command = string.Format("unsubscribe from {0} where pubsubid = {1}", TABLE, client.PubSubId());		
+            command = string.Format("unsubscribe from {0} where pubsubid = {1}", TABLE, client.PubSubId);		
             ASSERT_EXECUTE(client, command, true);
             ASSERT_ACTION(client, "unsubscribe");
             //
@@ -291,7 +291,7 @@ namespace PubSubSQLTest
             ASSERT_ACTION(client, "subscribe");
             ASSERT_PUBSUBID(client);
             // pubsub add
-            String pubsubid = client.PubSubId();
+            String pubsubid = client.PubSubId;
             ASSERT_PUBSUB_RESULT_SET(client, pubsubid, "add", ROWS, COLUMNS);
             ASSERT_DISCONNECT(client);
         }
@@ -309,7 +309,7 @@ namespace PubSubSQLTest
             // generate insert event
             insertRows();
             // pubsub insert
-            ASSERT_PUBSUB_RESULT_SET(client, client.PubSubId(), "insert", ROWS, COLUMNS);
+            ASSERT_PUBSUB_RESULT_SET(client, client.PubSubId, "insert", ROWS, COLUMNS);
             ASSERT_DISCONNECT(client);
         }
 
@@ -324,7 +324,7 @@ namespace PubSubSQLTest
             ASSERT_EXECUTE(client, command, true);
             ASSERT_ACTION(client, "subscribe");
             ASSERT_PUBSUBID(client);
-            String pubsubid = client.PubSubId();
+            String pubsubid = client.PubSubId;
             // generate update event
             command = string.Format("update {0} set col1 = newvalue", TABLE);	
             ASSERT_EXECUTE(client, command, true);
@@ -345,7 +345,7 @@ namespace PubSubSQLTest
             ASSERT_EXECUTE(client, command, true);
             ASSERT_ACTION(client, "subscribe");
             ASSERT_PUBSUBID(client);
-            String pubsubid = client.PubSubId();
+            String pubsubid = client.PubSubId;
             // generate delete event
             command = string.Format("delete from {0}", TABLE);	
             ASSERT_EXECUTE(client, command, true);
@@ -366,7 +366,7 @@ namespace PubSubSQLTest
             ASSERT_EXECUTE(client, command, true);
             command = string.Format("subscribe skip * from {0} where col1 = 1:col1", TABLE);
             ASSERT_EXECUTE(client, command, true);
-            String pubsubid = client.PubSubId();
+            String pubsubid = client.PubSubId;
             // generate remove event
             command = string.Format("update {0} set col1 = newvalue where col1 = 1:col1", TABLE);	
             ASSERT_EXECUTE(client, command, true);
@@ -386,12 +386,6 @@ namespace PubSubSQLTest
 
         public void fail(String message) {
             Assert.Fail(message);
-        }
-
-        public void iferror(Client client, bool expected, bool got) {
-            if (expected && !got) {
-                fail("Error " + client.Error());
-            }	
         }
 
         public void insertRow() {
@@ -440,52 +434,56 @@ namespace PubSubSQLTest
             }
         }
 
-        public void VALIDATE_RESULT(Client client, bool result) {
-            if (result && !client.Ok() ) fail("VALIDATE_RESULT failed: expected Ok");
-            if (!result && !client.Failed() ) fail("VALIDATE_RESULT failed: expected Failed");
-        }
-
         public void ASSERT_CONNECT(Client client, String address, bool expected) {
-            bool got = client.Connect(address);
+            bool got = true;
+            try
+            {
+                client.Connect(address);
+            }
+            catch (Exception )
+            {
+                got = false;
+            }
             if (expected != got) {
                 fail(string.Format("ASSERT_CONNECT failed: expected {0} got {1} ", expected, got));
             }	
-            iferror(client, expected, got);
-            VALIDATE_RESULT(client, got);
         }
 
         public void ASSERT_DISCONNECT(Client client) {
             client.Disconnect();
-            if (client.Failed()) {
-                fail("ASSERT_DISCONNECT failed: expected Ok() not Failed() after Disconnect()");
-            }
         }
 
         public void ASSERT_CONNECTED(Client client, bool expected) {
-            bool got = client.Connected();
+            bool got = client.Connected;
             if (expected != got) {
                 fail(string.Format("ASSERT_CONNECTED failed: expected {0} got {1}", expected, got));
             }
         }
 
         public void ASSERT_EXECUTE(Client client, String command, bool expected) {
-            bool got = client.Execute(command);
+            bool got = true;
+            try
+            {
+                client.Execute(command);
+            }
+            catch (Exception)
+            {
+                got = false;
+            }
             if (expected != got) {
                 fail(string.Format("ASSERT_EXECUTE failed: expected {0} got {1}", expected, got));	
             }
-            iferror(client, expected, got);
-            VALIDATE_RESULT(client, got);
         }
 
         public void ASSERT_ACTION(Client client, String expected) {
-            String got = client.Action();
+            String got = client.Action;
             if (expected != got) {
                 fail(string.Format("ASSERT_ACTION failed: expected {0} got {1}", expected, got));
             }
         }
 
         public void ASSERT_ROW_COUNT(Client client, int expected) {
-            int got = client.RowCount();
+            int got = client.RowCount;
             if (expected != got) {
                 fail(string.Format("ASSERT_ROW_COUNT failed: expected {0} but got {1}", expected, got));
             }
@@ -499,28 +497,28 @@ namespace PubSubSQLTest
         }
 
         public void ASSERT_ID(Client client) {
-            String id = client.Value("id");
+            String id = client.GetValue("id");
             if (string.IsNullOrEmpty(id)) {
                 fail("ASSERT_ID failed: expected non empty string");
             }
         }
 
         public void ASSERT_PUBSUBID(Client client) {
-            String pubsubid = client.PubSubId();	
+            String pubsubid = client.PubSubId;	
             if (string.IsNullOrEmpty(pubsubid)) {
                 fail("ASSERT_PUBSUBID failed: expected non empty string");
             }	
         }
 
         public void ASSERT_PUBSUBID_VALUE(Client client, String expected) {
-            String got = client.PubSubId(); 		
+            String got = client.PubSubId; 		
             if (expected != got) {
                 fail(string.Format("ASSERT_PUBSUBID_VALUE failed: expected {0} but got {1}", expected, got));
             }
         }
 
         public void ASSERT_VALUE(Client client, String column, String value, bool match) {
-            String got = client.Value(column);	
+            String got = client.GetValue(column);	
             if (match && value != got) {
                 fail(string.Format("ASSERT_VALUE failed: expected {0} but got {1}", value, got));
             }
@@ -530,7 +528,7 @@ namespace PubSubSQLTest
         }
 
         public void ASSERT_COLUMN_COUNT(Client client, int expected) {
-            int got = client.ColumnCount();
+            int got = client.ColumnCount;
             if (expected != got) {
                 fail(string.Format("ASSERT_COLUMN_COUNT failed: expected {0} but got {1}", expected, got));
             }
@@ -544,17 +542,22 @@ namespace PubSubSQLTest
         }	
 
         public void ASSERT_WAIT_FOR_PUBSUB(Client client, int timeout, bool expected) {
-            bool got = client.WaitForPubSub(timeout);
-            if (client.Failed()) {
-                fail(string.Format("ASSERT_WAIT_FOR_PUBSUB failed: {0}", client.Error()));
+            bool got = true;
+            try
+            {
+                got = client.WaitForPubSub(timeout);
             }
-            else if (expected != got) {
+            catch (Exception e)
+            {
+                fail(string.Format("ASSERT_WAIT_FOR_PUBSUB failed: {0}", e.Message)); 
+            }
+            if (expected != got) {
                 fail(string.Format("ASSERT_WAIT_FOR_PUBSUB failed: expected {0} but got {1}", expected, got));
             }	
         }
 
         public void ASSERT_NON_EMPTY_VALUE(Client client, int ordinal) {
-            if (string.IsNullOrEmpty(client.ValueByOrdinal(ordinal))) {
+            if (string.IsNullOrEmpty(client.GetValue(ordinal))) {
                 fail(string.Format("ASSERT_NON_EMPTY_VALUE failed: expected non empty string for ordinal {0}", ordinal));
             }
         }

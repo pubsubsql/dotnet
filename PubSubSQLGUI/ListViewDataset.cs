@@ -51,7 +51,7 @@ namespace PubSubSQLGUI
 
         public void SyncColumns(PubSubSQL.Client client)
         {
-            foreach (string col in client.Columns())
+            foreach (string col in client.Columns)
             {
                 if (!columnOrdinals.ContainsKey(col))
                 {
@@ -65,9 +65,9 @@ namespace PubSubSQLGUI
         public void ProcessRow(PubSubSQL.Client client)
         {
             dirtyFlag = true;
-            string id = client.Value("id");
+            string id = client.GetValue("id");
             List<Cell> row = null;
-            switch (client.Action())
+            switch (client.Action)
             {
                 case "select":
                 case "add":
@@ -77,7 +77,7 @@ namespace PubSubSQLGUI
                     // for select operations columns are always in the same order
                     foreach(string col in columns)
                     {
-                        row.Add(new Cell(client.Value(col)));
+                        row.Add(new Cell(client.GetValue(col)));
                     }
                     rows.Add(row);
                     if (!string.IsNullOrEmpty(id))
@@ -88,7 +88,7 @@ namespace PubSubSQLGUI
                 case "update":
                     if (idsToRows.TryGetValue(id, out row))
                     {
-                        foreach (string col in client.Columns())
+                        foreach (string col in client.Columns)
                         {
                             int ordinal = columnOrdinals[col];
                             // auto expand row
@@ -96,7 +96,7 @@ namespace PubSubSQLGUI
                             {
                                 row.Add(new Cell(string.Empty));
                             }
-                            row[ordinal].Value = client.Value(col);
+                            row[ordinal].Value = client.GetValue(col);
                             row[ordinal].LastUpdated = DateTime.Now.Ticks;
                         }
                     }

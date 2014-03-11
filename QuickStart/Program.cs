@@ -7,15 +7,7 @@ namespace QuickStart
 {
     class Program
     {
-        static void checkError(PubSubSQL.Client client, string str)
-        {
-            if (client.Failed()) 
-            {
-                Console.WriteLine("Error: {0} {1}", client.Error(), str);
-            }
-        }
-
-        static void Main(string[] args)
+        static void runQuickStart()
         {
             PubSubSQL.Client client = new PubSubSQL.Client();
             PubSubSQL.Client subscriber = new PubSubSQL.Client();
@@ -26,9 +18,7 @@ namespace QuickStart
 
             string address = "localhost:7777";
             client.Connect(address);
-            checkError(client, "client connect failed");
             subscriber.Connect(address);
-            checkError(client, "subscriber connect failed");
 
             //----------------------------------------------------------------------------------------------------
             // SQL MUST-KNOW RULES
@@ -56,39 +46,41 @@ namespace QuickStart
             // INDEX
             //----------------------------------------------------------------------------------------------------
 
-            client.Execute("key Stocks Ticker");
-            client.Execute("tag Stocks MarketCap");
+            try
+            {
+                client.Execute("key Stocks Ticker");
+                client.Execute("tag Stocks MarketCap");
+            }
+            catch (ArgumentException )
+            {
+                // key or tag may have already be defined, so its ok 
+            }
 
             //----------------------------------------------------------------------------------------------------
             // SUBSCRIBE
             //----------------------------------------------------------------------------------------------------
 
             subscriber.Execute("subscribe * from Stocks where MarketCap = 'MEGA CAP'");
-            string pubsubid = subscriber.PubSubId();
+            string pubsubid = subscriber.PubSubId;
             Console.WriteLine("subscribed to Stocks pubsubid: {0}", pubsubid);
-            checkError(subscriber, "subscribe failed");
 
             //----------------------------------------------------------------------------------------------------
             // PUBLISH INSERT
             //----------------------------------------------------------------------------------------------------
 
             client.Execute("insert into Stocks (Ticker, Price, MarketCap) values (GOOG, '1,200.22', 'MEGA CAP')");
-            checkError(client, "insert GOOG failed");
             client.Execute("insert into Stocks (Ticker, Price, MarketCap) values (MSFT, 38,'MEGA CAP')");
-            checkError(client, "insert MSFT failed");
 
             //----------------------------------------------------------------------------------------------------
             // SELECT
             //----------------------------------------------------------------------------------------------------
 
             client.Execute("select id, Ticker from Stocks");
-            checkError(client, "select failed");
             while (client.NextRow())
             {
                 Console.WriteLine("*********************************");
-                Console.Write("id:{0} Ticker:{1} \n", client.Value("id"), client.Value("Ticker"));
+                Console.Write("id:{0} Ticker:{1} \n", client.GetValue("id"), client.GetValue("Ticker"));
             }
-            checkError(client, "NextRow failed");
 
             //----------------------------------------------------------------------------------------------------
             // PROCESS PUBLISHED INSERT
@@ -98,50 +90,43 @@ namespace QuickStart
             while (subscriber.WaitForPubSub(timeout))
             {
                 Console.WriteLine("*********************************");
-                Console.WriteLine("Action:{0}", subscriber.Action());
+                Console.WriteLine("Action:{0}", subscriber.Action);
                 while (subscriber.NextRow())
                 {
-                    Console.WriteLine("New MEGA CAP stock:{0}", subscriber.Value("Ticker"));
-                    Console.WriteLine("Price:{0}", subscriber.Value("Price"));
+                    Console.WriteLine("New MEGA CAP stock:{0}", subscriber.GetValue("Ticker"));
+                    Console.WriteLine("Price:{0}", subscriber.GetValue("Price"));
                 }
-                checkError(subscriber, "NextRow failed");
             }
-            checkError(subscriber, "WaitForPubSub failed");
 
             //----------------------------------------------------------------------------------------------------
             // PUBLISH UPDATE
             //----------------------------------------------------------------------------------------------------
 
             client.Execute("update Stocks set Price = '1,500.00' where Ticker = GOOG");
-            checkError(client, "update GOOG failed");
 
             //----------------------------------------------------------------------------------------------------
             // SERVER WILL NOT PUBLISH INSERT BECAUSE WE ONLY SUBSCRIBED TO 'MEGA CAP'
             //----------------------------------------------------------------------------------------------------
 
             client.Execute("insert into Stocks (Ticker, Price, MarketCap) values (IBM, 168, 'LARGE CAP')");
-            checkError(client, "insert IBM failed");
 
             //----------------------------------------------------------------------------------------------------
             // PUBLISH ADD
             //----------------------------------------------------------------------------------------------------
 
             client.Execute("update Stocks set Price = 230.45, MarketCap = 'MEGA CAP' where Ticker = IBM");
-            checkError(client, "update IBM to MEGA CAP failed");
 
             //----------------------------------------------------------------------------------------------------
             // PUBLISH REMOVE
             //----------------------------------------------------------------------------------------------------
 
             client.Execute("update Stocks set Price = 170, MarketCap = 'LARGE CAP' where Ticker = IBM");
-            checkError(client, "update IBM to LARGE CAP failed");
 
             //----------------------------------------------------------------------------------------------------
             // PUBLISH DELETE
             //----------------------------------------------------------------------------------------------------
 
             client.Execute("delete from Stocks");
-            checkError(client, "delete failed");
 
             //----------------------------------------------------------------------------------------------------
             // PROCESS ALL PUBLISHED
@@ -150,27 +135,24 @@ namespace QuickStart
             while (subscriber.WaitForPubSub(timeout))
             {
                 Console.WriteLine("*********************************");
-                Console.WriteLine("Action:{0}", subscriber.Action());
+                Console.WriteLine("Action:{0}", subscriber.Action);
                 while (subscriber.NextRow())
                 {
                     int ordinal = 0;
-                    foreach (string column in subscriber.Columns())
+                    foreach (string column in subscriber.Columns)
                     {
-                        Console.Write("{0}:{1} ", column, subscriber.ValueByOrdinal(ordinal));
+                        Console.Write("{0}:{1} ", column, subscriber.GetValue(ordinal));
                         ordinal++;
                     }
-                    Console.WriteLine(); 
+                    Console.WriteLine();
                 }
-                checkError(subscriber, "NextRow failed");
             }
-            checkError(subscriber, "WaitForPubSub failed");
 
             //----------------------------------------------------------------------------------------------------
             // UNSUBSCRIBE
             //----------------------------------------------------------------------------------------------------
 
             subscriber.Execute("unsubscribe from Stocks");
-            checkError(subscriber, "NextRow failed");
 
             //----------------------------------------------------------------------------------------------------
             // DISCONNECT
@@ -178,7 +160,19 @@ namespace QuickStart
 
             client.Disconnect();
             subscriber.Disconnect();
-        
+        }
+
+        static void Main(string[] args)
+        {
+            try
+            {
+                runQuickStart();
+            }
+            catch (Exception e)
+            {
+                System.Console.WriteLine(e.Message);
+            }
+
         }
     }
 }

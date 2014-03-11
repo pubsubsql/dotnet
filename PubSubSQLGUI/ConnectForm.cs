@@ -13,6 +13,7 @@ namespace PubSubSQLGUI
     {
         public string TableName = string.Format("T{0:HHmmss}", DateTime.Now);
         public string Address = string.Empty;
+
         public ConnectForm()
         {
             InitializeComponent();

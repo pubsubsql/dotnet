@@ -48,7 +48,7 @@ namespace PubSubSQLGUI
 
         private void enableDisableControls()
         {
-            bool connected = client.Connected();
+            bool connected = client.Connected;
             connectLocalButton.Enabled = !connected;
             connectLocalMenu.Enabled = !connected;
             connectButton.Enabled = !connected;
@@ -98,11 +98,16 @@ namespace PubSubSQLGUI
         private void connect(string address)
         {
             clearResults();
-            if (client.Connect(address))
+            try
             {
+                client.Connect(address);
                 updateConnectedAddress(address);
+                setStatusOk();
             }
-            setStatus();
+            catch (Exception e)
+            {
+                setStatusError(e.Message);
+            }
             enableDisableControls();
         }
 
@@ -123,8 +128,15 @@ namespace PubSubSQLGUI
                 executing();
                 string command = queryText.Text.Trim();
                 if (string.IsNullOrEmpty(command)) return;
-                client.Execute(command);
-                processResponse();
+                try
+                {
+                    client.Execute(command);
+                    processResponse();
+                }
+                catch (Exception x)
+                {
+                    setStatusError(x.Message);
+                }
             }
             finally
             {
@@ -176,7 +188,7 @@ namespace PubSubSQLGUI
         {
             if (dataset.ResetDirty())
             {
-                setStatus();
+                setStatusOk();
                 setJSON();
                 listView.VirtualListSize = dataset.RowCount;
                 resultsTabContainer.SelectedTab = resultsTab;
@@ -203,23 +215,23 @@ namespace PubSubSQLGUI
             jsonText.Text = "";
         }
 
-        private void setStatus()
+        private void setStatusError(string error)
         {
-            if (client.Ok())
-            {
-                statusText.ForeColor = Color.Black;
-                statusText.Text = "ok";
-                return;
-            }
             statusText.ForeColor = Color.Red;
-            statusText.Text = "error\r\n" + client.Error();
+            statusText.Text = "error\r\n" + error;
+            resultsTabContainer.SelectedTab = statusTab;
             enableDisableControls();
-            return;
+        }
+
+        private void setStatusOk()
+        {
+            statusText.ForeColor = Color.Black;
+            statusText.Text = "ok";
         }
 
         private void setJSON()
         {
-            jsonText.Text = client.JSON();
+            jsonText.Text = client.JSON;
         }
         
         private void updateConnectedAddress(string address)
@@ -250,23 +262,22 @@ namespace PubSubSQLGUI
         {
             dataset.Clear();
             // determine if we just subscribed  
-            if (client.PubSubId() != string.Empty && client.Action() == "subscribe")
+            if (client.PubSubId != string.Empty && client.Action == "subscribe")
             {
-                setStatus();
+                setStatusOk();
                 setJSON();
                 // enter event loop
                 waitForPubSubEvent();
                 return;
             }
             // check if it is result set
-            if (client.RowCount() > 0 && client.ColumnCount() > 0)
+            if (client.RowCount > 0 && client.ColumnCount > 0)
             {
                 updateDataset(); 
                 resultsTabContainer.SelectedTab = resultsTab;
             }
             //            
-            if (client.Failed())resultsTabContainer.SelectedTab = statusTab;
-            setStatus();
+            setStatusOk();
             setJSON();
         }
 
@@ -284,21 +295,28 @@ namespace PubSubSQLGUI
         {
             while (!cancelExecuteFlag)
             {
-                bool timedout = !client.WaitForPubSub(PUBSUB_TIMEOUT);
-                if (client.Failed()) break;
-                if (!timedout) updateDataset();
+                bool hasData = false;
+                try
+                {
+                    hasData = client.WaitForPubSub(PUBSUB_TIMEOUT);
+                }
+                catch (Exception x)
+                {
+                    setStatusError(x.Message);
+                    return;
+                }
+                if (hasData) updateDataset();
                 Application.DoEvents();
             }
-            if (client.Failed()) setStatus();
         }
 
         private void updateDataset()
         {
-            if (!(client.RowCount() > 0 && client.ColumnCount() > 0)) return;
+            if (!(client.RowCount > 0 && client.ColumnCount > 0)) return;
             // inside dataset
             dataset.SyncColumns(client);
             syncColumns();
-            dataset.AddRowsCapacity(client.RowCount());
+            dataset.AddRowsCapacity(client.RowCount);
             while (client.NextRow() && !cancelExecuteFlag)
             {
                 dataset.ProcessRow(client);

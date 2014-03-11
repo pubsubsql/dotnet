@@ -70,33 +70,22 @@ namespace PubSubSQL
         /// Connect connects the Client to the pubsubsql server.
         /// Address string has the form host:port.
         /// </summary>
-        public bool Connect(string address)
+        public void Connect(string address)
         {
             Disconnect();
             // validate address
             int sep = address.IndexOf(':');
             if (sep < 0)
             {
-                setErrorString("Invalid network address");
-                return false;
+                throw new ArgumentException("Invalid network address");
             }
             // set host and port
             host = address.Substring(0, sep);
-            if (!toPort(ref port, address.Substring(sep + 1))) return false;
+            toPort(ref port, address.Substring(sep + 1));
             // connect
-            try
-            {
-                Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                socket.Connect(host, port);
-                rw.Set(socket, CLIENT_DEFAULT_BUFFER_SIZE); 
-                return true;
-            }
-            catch (Exception e)
-            {
-                setError(e);
-            }
-            //
-            return false;
+            Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            socket.Connect(host, port);
+            rw.Set(socket, CLIENT_DEFAULT_BUFFER_SIZE); 
         }
 
         /// <summary>
@@ -105,8 +94,17 @@ namespace PubSubSQL
         public void Disconnect()
         {
             backlog.Clear();
-            write("close");
-            // write may generate errro so we reset after instead
+            try
+            {
+                if (Connected)
+                {
+                    write("close");
+                }
+            }
+            catch (Exception e)
+            {
+
+            }
             reset();
             rw.Close();
         }
@@ -114,86 +112,72 @@ namespace PubSubSQL
         /// <summary>
         /// Connected returns true if the Client is currently connected to the pubsubsql server.
         /// </summary>
-        public bool Connected()
+        public bool Connected
         {
-            return rw.Valid();
+            get { return rw.Valid(); }
         }
 
         /// <summary>
-        /// Ok determines if the last command executed against the pubsubsql server succeeded.
-        /// </summary>
-        public bool Ok()
-        {
-            return string.IsNullOrEmpty(err); 
-        }
-
-        /// <summary>
-        /// Failed determines if the last command executed against the pubsubsql server failed.
-        /// </summary>
-        public bool Failed()
-        {
-            return !Ok(); 
-        }
-
-        /// <summary>
-        /// Error returns an error message when the last command executed against 
-        /// the pubsubsql server fails.
-        /// </summary>
-        public string Error()
-        {
-            return err;
-        }
-
-        /// <summary>
-        /// Execute executes a command against the pubsubsql server and returns true on success.
+        /// Execute executes a command against the pubsubsql server.
         /// The pubsubsql server returns to the Client a response in JSON format.
         /// </summary>
-        public bool Execute(string command)
+        public void Execute(string command)
         {
             reset();
-            bool ok = write(command);
+            write(command);
             NetHeader header = new NetHeader();
-            while (ok)
+            for (;;)
             {
                 byte[] bytes = null;
                 reset();
-                ok = read(ref header, out bytes);
-                if (!ok) break;
-                if (header.RequestId == requestId) 
+                read(ref header, out bytes);
+                if (header.RequestId == requestId)
                 {
                     // response we are waiting for
-                    return unmarshalJSON(bytes);
+                    unmarshalJSON(bytes);
+                    return;
                 }
                 else if (header.RequestId == 0)
                 {
                     // pubsub action, save it and skip it for now
                     // will be proccesed next time WaitPubSub is called
                     backlog.Enqueue(bytes);
-                } 
+                }
                 else if (header.RequestId < this.requestId)
                 {
                     // we did not read full result set from previous command ignore it or flag and error?
                     // for now lets ignore it, continue reading until we hit our request id 
                     reset();
-                } 
+                }
                 else
                 {
                     // this should never happen
-                    setErrorString("Protocol error invalid requestId");
-                    ok = false;
-                }       
+                    throw new Exception("Protocol error invalid requestId");
+                }
             }
-            return ok;
+        }
+
+        /// <summary>
+        /// Stream executes a command against the pubsubsql server without returning a response.
+        /// </summary>
+        public void Stream(string command)
+        {
+            reset();
+            //TODO optimize
+            write("stream " + command);
         }
 
         /// <summary>
         /// JSON returns a response string in JSON format from the 
         /// last command executed against the pubsubsql server.
         /// </summary>
-        public string JSON()
+        public string JSON
         {
-            if (rawjson == null) return string.Empty;
-            return System.Text.UTF8Encoding.UTF8.GetString(rawjson);
+            get
+            {
+                if (rawjson == null) return string.Empty;
+                return System.Text.UTF8Encoding.UTF8.GetString(rawjson);
+            }
         }
 
 
@@ -202,10 +186,13 @@ namespace PubSubSQL
         /// returned by the last command executed against the pubsubsql server.
         /// Valid actions are [status, insert, select, delete, update, add, remove, subscribe, unsubscribe]
         /// </summary>
-        public string Action()
+        public string Action
         {
-            if (response.Action == null) return string.Empty;
-            return response.Action;
+            get
+            {
+                if (response.Action == null) return string.Empty;
+                return response.Action;
+            }
         }
 
         /// <summary>
@@ -214,29 +201,31 @@ namespace PubSubSQL
         /// PubSubId should be used by the Client to uniquely identify messages 
         /// published by the pubsubsql server.
         /// </summary>
-        public string PubSubId()
+        public string PubSubId
         {
-            if (response.PubSubId == null) return string.Empty;
-            return response.PubSubId;
+            get
+            {
+                if (response.PubSubId == null) return string.Empty;
+                return response.PubSubId;
+            }
         }
 
         /// <summary>
         /// RowCount returns the number of rows in the result set returned by the pubsubsql server.
         /// </summary>
-        public int RowCount()
+        public int RowCount
         {
-            return response.Rows;
+            get { return response.Rows; } 
         }
 
         /// <summary>
         /// NextRow is used to move to the next row in the result set returned by the pubsubsql server.    
         /// When called for the first time, NextRow moves to the first row in the result set.
-        /// Returns false when all rows are read or if there is an error.
-        /// To find out if false was returned because of an error, use Ok or Failed functions.
+        /// Returns false when all rows are read.
         /// </summary>
         public bool NextRow()
         {
-            while (Ok())
+            for (;;)
             {
                 // no resulst set
                 if (response.Rows == 0) return false;
@@ -254,7 +243,7 @@ namespace PubSubSQL
                 reset();
                 NetHeader header = new NetHeader();
                 byte[] bytes = null;
-                if (!read(ref header, out bytes)) return false;
+                read(ref header, out bytes);
                 if (header.RequestId > 0 && header.RequestId != this.requestId)
                 {
                     protocolError();
@@ -262,14 +251,13 @@ namespace PubSubSQL
                 }
                 unmarshalJSON(bytes);
             }
-            return false;
         }
 
         /// <summary>
-        /// Value returns the value within the current row for the given column name.
-        /// If the column name does not exist, Value returns an empty string.	
+        /// GetValue returns the value within the current row for the given column name.
+        /// If the column name does not exist, GetValue returns an empty string.	
         /// </summary>
-        public string Value(string column)
+        public string GetValue(string column)
         {
             int ordinal = -1;
             if (record < 0 || record >= response.Values.Count) return string.Empty;
@@ -278,11 +266,11 @@ namespace PubSubSQL
         }
 
         /// <summary>
-        /// ValueByOrdinal returns the value within the current row for the given column ordinal.
+        /// GetValue returns the value within the current row for the given column ordinal.
         /// The column ordinal represents the zero based position of the column in the Columns collection of the result set.
         /// If the column ordinal is out of range, ValueByOrdinal returns an empty string.		
         /// </summary>
-        public string ValueByOrdinal(int ordinal)
+        public string GetValue(int ordinal)
         {
             if (ordinal < 0) return string.Empty;
             if (record < 0 || record >= response.Values.Count) return string.Empty;
@@ -301,29 +289,34 @@ namespace PubSubSQL
         /// <summary>
         /// ColumnCount returns the number of columns in the columns collection of the result set.
         /// </summary>
-        public int ColumnCount()
+        public int ColumnCount
         {
-            if (response.Columns == null) return 0;
-            return response.Columns.Count;
+            get
+            {
+                if (response.Columns == null) return 0;
+                return response.Columns.Count;
+            }
         }
 
         /// <summary>
         /// Columns returns the column names in the columns collection of the result set.
         /// </summary>
-        public IEnumerable<string> Columns()
+        public IEnumerable<string> Columns
         {
-            if (response.Columns == null)
+            get
             {
-                return new List<string>();
+                if (response.Columns == null)
+                {
+                    return new List<string>();
+                }
+                return response.Columns;
             }
-            return response.Columns;
         }
 
         /// <summary>
         /// WaitForPubSub waits until the pubsubsql server publishes a message for
         /// the subscribed Client or until the timeout interval elapses.
-        /// Returns false when timeout interval elapses or if there is and error.
-        /// To find out if false was returned because of an error, use Ok or Failed functions. 
+        /// Returns false when timeout interval elapses.
         /// </summary>
         public bool WaitForPubSub(int timeout)
         {
@@ -337,21 +330,20 @@ namespace PubSubSQL
             if (backlog.Count > 0)
             {
                 byte[] bytes = backlog.Dequeue();
-                return unmarshalJSON(bytes);
+                unmarshalJSON(bytes);
+                return true;
             }
             for (;;)
             {
                 byte[] bytes = null;
                 NetHeader header = new NetHeader();
-                bool timedout = false;
                 // return on error
-                if (!readTimeout(timeout, ref header, out bytes, ref timedout)) return false;
-                // timedout
-                if (timedout) return false;
+                if (!readTimeout(timeout, ref header, out bytes)) return false;
                 // we got what we were looking for
                 if (header.RequestId == 0)
                 {
-                    return unmarshalJSON(bytes);
+                    unmarshalJSON(bytes);
+                    return true; 
                 }
                 // this is not pubsub message; are we reading abandoned result set 
                 // ignore and continue reading do we want to adjust time out value here?
@@ -359,7 +351,7 @@ namespace PubSubSQL
             }
         }
 
-        void reset()
+        private void reset()
         {
             err = string.Empty;
             response = new responseData();
@@ -368,43 +360,25 @@ namespace PubSubSQL
             this.record = -1;
         }
 
-        bool toPort(ref int port, string sport)
+        private void toPort(ref int port, string sport)
         {
             try
             {
                 port = Convert.ToInt32(sport, 10);
-                return true;
             }
             catch (Exception )
             {
-                setErrorString("Invalid port " + sport);
+                throw new ArgumentException("Invalid port " + sport);
             }
-            return false;
         }
 
-        void protocolError()
+        private void protocolError()
         {
             Disconnect();
-            setErrorString("Protocol error");
+            throw new Exception("Protocol error");
         }
 
-        void setErrorString(string err)
-        {
-            reset();
-            this.err = err;
-        }
-
-        void setError(Exception e)
-        {
-            setErrorString(e.Message);
-        }
-
-        void setError(string prefix, Exception e)
-        {
-            setErrorString(prefix + "\r\n" + e.Message);
-        }
-
-        bool write(string message)
+        private void write(string message)
         {
             try
             {
@@ -415,76 +389,56 @@ namespace PubSubSQL
             catch (Exception e)
             {
                 hardDisconnect();
-                setError(e);
-                return false;
+                throw e;
             }
-            return true;
         }
 
-        bool readTimeout(int timeout, ref NetHeader header, out byte[] bytes, ref bool timedout)
+        private bool readTimeout(int timeout, ref NetHeader header, out byte[] bytes)
         {
-            timedout = false;
             bytes = null;
             try
             {
-                if (!rw.Valid()) throw new Exception("Not connected");
-                if (!rw.ReadTimeout(timeout, ref header, out bytes))
-                {
-                    timedout = true;
-                }
-                return true;
+                if (!rw.Valid()) throw new InvalidOperationException("Not connected");
+                return rw.ReadTimeout(timeout, ref header, out bytes);
             }
             catch (Exception e)
             {
                 hardDisconnect();
-                setError(e);
+                throw e;
             }
-            return false;
         }
 
-        void hardDisconnect()
+        private void hardDisconnect()
         {
             backlog.Clear();
             rw.Close();
             reset();
         }
 
-        bool read(ref NetHeader header, out byte[] bytes)
+        private void read(ref NetHeader header, out byte[] bytes)
         {
             const int MAX_READ_TIMEOUT_MILLISECONDS = 1000 * 60 * 3;
-            bool timedout = false;
-            bool err = readTimeout(MAX_READ_TIMEOUT_MILLISECONDS, ref header, out bytes, ref timedout);
-            if (timedout)
+            bool timedout = readTimeout(MAX_READ_TIMEOUT_MILLISECONDS, ref header, out bytes);
+            if (!timedout)
             {
-                setErrorString("Read timed out");
+                throw new TimeoutException();
             }
-            return timedout || err;
         }
 
-        bool unmarshalJSON(byte[] bytes)
+        private void unmarshalJSON(byte[] bytes)
         {
-            try
+            rawjson = bytes;
+            MemoryStream stream = new MemoryStream(bytes);
+            DataContractJsonSerializer jsonSerializer = new DataContractJsonSerializer(typeof(responseData));
+            response = jsonSerializer.ReadObject(stream) as responseData;
+            if (response != null && response.Status != "ok")
             {
-                rawjson = bytes;
-                MemoryStream stream = new MemoryStream(bytes);
-                DataContractJsonSerializer jsonSerializer = new DataContractJsonSerializer(typeof(responseData));
-                response = jsonSerializer.ReadObject(stream) as responseData;
-                if (response != null && response.Status != "ok")
-                {
-                    setErrorString(response.Msg);
-                    return false;
-                }
-                setColumns();
-                return true;
+                throw new ArgumentException(response.Msg);
             }
-            catch (Exception e)
-            {
-                setError(e);
-            }
-            return false;
+            setColumns();
         }
 
-        void setColumns()
+        private void setColumns()
         {
             if (response.Columns != null)
             {

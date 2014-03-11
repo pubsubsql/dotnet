@@ -22,14 +22,14 @@ namespace PubSubSQLGUI
             try
             {
                 ids.Clear();
-                if (!client.Connect(Address)) throw new Exception("Failed to connect");
+                client.Connect(Address);
                 // first insert data
                 for (int row = 1; row <= Rows && !stopFlag; row++)
                 {
                     string insert = generateInsert(row);
-                    if (!client.Execute(insert)) throw new Exception("Failed to insert: " + insert);
-                    if (!client.NextRow()) throw new Exception("Failed to move to the first record");
-                    string id = client.Value("id");
+                    client.Execute(insert);
+                    client.NextRow();
+                    string id = client.GetValue("id");
                     if (string.IsNullOrEmpty(id)) throw new Exception("id is empty");
                     ids.Add(id);
                 }
@@ -39,7 +39,7 @@ namespace PubSubSQLGUI
                     for (int i = 0; i < 100 && !stopFlag; i++)
                     {
                         string update = generateUpdate();
-                        if (!client.Execute(update)) throw new Exception(client.Error());
+                        client.Stream(update);
                     }
                     // gui thread can not process that many messages from the server
                     // slow down the updates
@@ -114,7 +114,7 @@ namespace PubSubSQLGUI
                 else builder.Append(" , ");
                 builder.Append(row.ToString());
             }
-            builder.Append(")");
+            builder.Append(") returning id");
             return builder.ToString();
         }
     }
