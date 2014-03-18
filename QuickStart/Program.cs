@@ -53,7 +53,7 @@ namespace QuickStart
             }
             catch (ArgumentException )
             {
-                // key or tag may have already be defined, so its ok 
+                // key or tag may have already been defined, so its ok 
             }
 
             //----------------------------------------------------------------------------------------------------

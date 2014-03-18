@@ -158,7 +158,7 @@ namespace PubSubSQL
         }
 
         /// <summary>
-        /// Stream executes a command against the pubsubsql server without returning a response.
+        /// Stream sends a command to the pubsubsql server without returning a response.
         /// </summary>
         public void Stream(string command)
         {
@@ -184,7 +184,6 @@ namespace PubSubSQL
         /// <summary>
         /// Action returns an action string from the response 
         /// returned by the last command executed against the pubsubsql server.
-        /// Valid actions are [status, insert, select, delete, update, add, remove, subscribe, unsubscribe]
         /// </summary>
         public string Action
         {
@@ -268,7 +267,7 @@ namespace PubSubSQL
         /// <summary>
         /// GetValue returns the value within the current row for the given column ordinal.
         /// The column ordinal represents the zero based position of the column in the Columns collection of the result set.
-        /// If the column ordinal is out of range, ValueByOrdinal returns an empty string.		
+        /// If the column ordinal is out of range, GetValue returns an empty string.		
         /// </summary>
         public string GetValue(int ordinal)
         {
