@@ -158,7 +158,8 @@ namespace PubSubSQL
         }
 
         /// <summary>
-        /// Stream sends a command to the pubsubsql server without returning a response.
+        /// Stream sends a command to the pubsubsql server.
+        /// The pubsubsql server does not return a response to the Client.
         /// </summary>
         public void Stream(string command)
         {
